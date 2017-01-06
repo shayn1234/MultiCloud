@@ -1,0 +1,63 @@
+tosca_definitions_version: cloudify_dsl_1_3
+imports:
+  - 'http://www.getcloudify.org/spec/cloudify/3.4/types.yaml'
+node_types:
+  Cloud:
+    derived_from: cloudify.nodes.Root
+  MultiCloud:
+    derived_from: cloudify.nodes.Root
+node_templates:
+  Datacentred1:
+    type: Cloud
+    relationships:
+      - type: cloudify.relationships.connected_to
+        target: MultiCloud
+  AWS:
+    type: Cloud
+    relationships:
+      - type: cloudify.relationships.connected_to
+        target: MultiCloud
+  MultiCloud:
+    type: MultiCloud
+
+  Router:
+    type: cloudify.nodes.Router
+    relationships:
+      - type: cloudify.relationships.contained_in
+        target: DataCentred1
+  vCPE:
+    type: cloudify.nodes.Router
+    relationships:
+      - type: cloudify.relationships.contained_in
+        target: DataCentred1
+  vYatta:
+    type: cloudify.nodes.Router
+    relationships:
+      - type: cloudify.relationships.contained_in
+        target: AWS
+  Datacentred2:
+    type: Cloud
+    relationships:
+    - type: cloudify.relationships.connected_to
+        target: MultiCloud
+  K8 Proxy:
+    type: cloudify.nodes.WebServer
+    relationships:
+      - type: cloudify.relationships.contained_in
+        target: Datacentred2
+  Qugga Docker:
+    type: cloudify.kubernetes.Microservice
+    properties:
+      name: nginx
+      ssh_username: ubuntu
+      ssh_keyfilename: /root/.ssh/agent_key.pem
+      config_files:
+        - file: resources/kubernetes/pod.yaml
+#        - file: resources/kubernetes/service.yaml
+      env:
+        - ROUTE1:  10.100.0.0/24 10.100.0.1
+    relationships:
+      - type: cloudify.relationships.contained_in
+        target: Datacentred2
+groups: {}
+
